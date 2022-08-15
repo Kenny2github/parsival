@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "parsival"
+description = "A class-based language parser."
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["parser", "grammar", "language"]
+license = {file = "LICENSE"}
+authors = [{name = "AbyxDev"}]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Software Development :: Interpreters",
+    "Topic :: Text Processing :: General",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+	"Typing :: Typed"
+]
+dependencies = []
+dynamic = ["version"]
+
+[project.urls]
+Source = "https://github.com/Kenny2github/parsival"
+
+[tool.setuptools]
+packages = ["parsival"]
+
+[tool.setuptools.dynamic]
+version = {attr = "parsival.__version__"}
+
+[tool.pytest.ini_options]
+addopts = [
+]
