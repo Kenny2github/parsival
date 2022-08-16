@@ -11,6 +11,13 @@ Annotations = dict[str, t.Union[t.Any, type]]
 class Failed(SyntaxError):
     """Parsing using this class failed."""
 
+class FailedToCommit(Failed):
+    """Parsing failed after committing to an option."""
+
+class Commit(Enum):
+    """Commit to parsing this rule; do not try alternatives."""
+    COMMIT = None # quick & easy singleton
+
 ### t.Annotated-like rules
 
 # get_type_hints() fails when InitVar is involved without this monkeypatch
@@ -209,8 +216,13 @@ class Parser:
         if t.get_origin(rule) is t.Union:
             union_args = t.get_args(t.cast(t.Union, rule))
             for union_arg in union_args:
-                with self.backtrack():
-                    return self.apply_rule(union_arg, self.pos)
+                try:
+                    with self.backtrack(reraise=True):
+                        return self.apply_rule(union_arg, self.pos)
+                except FailedToCommit as exc:
+                    raise Failed(f'Expecting {union_arg} at {self.strpos}') from exc
+                except Failed:
+                    pass # try next
             else:
                 raise Failed(f'Expecting one of {union_args} at {self.strpos}')
 
@@ -248,8 +260,19 @@ class Parser:
 
         rule = t.cast(type, rule)
         kwargs: dict[str, t.Any] = {}
+        committed = False
         for name, annotation in self.get_annotations(rule).items():
-            kwargs[name] = self.apply_rule(annotation, self.pos)
+            if self.unpeel_initvar(annotation) is Commit:
+                committed = True
+                kwargs[name] = Commit.COMMIT
+                continue
+            try:
+                kwargs[name] = self.apply_rule(annotation, self.pos)
+            except Failed as exc:
+                if committed:
+                    raise FailedToCommit(str(exc)) from exc
+                else:
+                    raise
         return rule(**kwargs)
 
     def eval_(self, rule: Rule) -> AST_F:
