@@ -154,7 +154,7 @@ class Parser:
         if space_match is not None:
             self.pos = Pos(space_match.end())
 
-    def try_class(self, rule: Rule) -> AST:
+    def try_rule(self, rule: Rule) -> AST:
         if isinstance(rule, dataclasses.InitVar):
             # unpeel init vars
             rule = rule.type
@@ -241,7 +241,7 @@ class Parser:
 
     def eval_(self, rule: Rule) -> AST_F:
         try:
-            return self.try_class(rule)
+            return self.try_rule(rule)
         except Failed as exc:
             return exc
 
