@@ -154,10 +154,13 @@ class Parser:
         if space_match is not None:
             self.pos = Pos(space_match.end())
 
-    def try_rule(self, rule: Rule) -> AST:
+    def unpeel_initvar(self, rule: Rule) -> Rule:
         if isinstance(rule, dataclasses.InitVar):
-            # unpeel init vars
-            rule = rule.type
+            return rule.type
+        return rule
+
+    def try_rule(self, rule: Rule) -> AST:
+        rule = self.unpeel_initvar(rule)
 
         if isinstance(rule, type) and issubclass(rule, Enum):
             # unpack enum values into literal
