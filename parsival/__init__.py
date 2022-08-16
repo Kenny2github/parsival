@@ -75,7 +75,8 @@ SPACE = Regex[str, r'\s+']
 
 ### Packrat memoization data types
 
-AST = t.NewType('AST', object)
+_AST = t.NewType('_AST', object)
+AST = t.Optional[_AST]
 AST_F = t.Union[AST, Failed]
 _Rule = t.NewType('_Rule', object)
 Rule = t.Union[type, _Rule]
@@ -259,7 +260,7 @@ class Parser:
                     min_len = 0
                 if len(values) < min_len:
                     raise Failed(f'Failed to match at least {min_len} of {rule!r} at {self.strpos}')
-                return AST(values)
+                return t.cast(AST, values)
 
         rule = t.cast(type, rule)
         kwargs: dict[str, t.Any] = {}
