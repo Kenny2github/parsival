@@ -274,7 +274,7 @@ class Parser:
             m = MemoEntry(lr, pos)
             self.memo[rule, pos] = m
 
-            ans = self.try_class(rule)
+            ans = self.eval_(rule)
             # Pop lr off the rule invocation stack.
             self.lr_stack = self.lr_stack.next
             m.pos = self.pos
