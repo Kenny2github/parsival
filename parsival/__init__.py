@@ -161,7 +161,8 @@ class Parser:
 
         if isinstance(rule, type) and issubclass(rule, Enum):
             # unpack enum values into literal
-            return self.apply_rule(t.Literal[tuple(rule)]) # type: ignore
+            rule = t.Literal[tuple(rule)] # type: ignore
+            return self.apply_rule(rule, self.pos)
 
         if isinstance(rule, SkipSpaces):
             with self.backtrack(reraise=True):
