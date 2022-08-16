@@ -47,19 +47,21 @@ class _Regex(_RuleAnnotation):
 
 T = t.TypeVar('T')
 
-class SkipSpaces(_RuleAnnotation, t.Generic[T]):
+class _Not(_RuleAnnotation, t.Generic[T]):
     rule: T
 
     def __init__(self, rule: T) -> None:
         super().__init__(rule)
         self.rule = rule
 
-    def __class_getitem__(cls, rule: T) -> SkipSpaces[T]:
+    def __class_getitem__(cls, rule: T) -> _Not[T]:
         return cls(rule)
 
 if t.TYPE_CHECKING:
+    Not = t.Optional # since successful parse returns None
     Regex = t.Annotated
 else:
+    Not = _Not
     Regex = _Regex
 SPACE = Regex[str, r'\s*']
 REQUIRED_SPACE = Regex[str, r'\s+']
@@ -161,6 +163,17 @@ class Parser:
 
     def try_rule(self, rule: Rule) -> AST:
         rule = self.unpeel_initvar(rule)
+
+        if isinstance(rule, _Not):
+            # Not might check against spaces, so check before skipping them.
+            # If rule.rule isn't SPACE, they will get skipped later.
+            rule = rule.rule
+            try:
+                self.apply_rule(rule, self.pos)
+            except Failed:
+                return None
+            else:
+                raise Failed(f'Expected not to parse {rule!r} at {self.strpos}')
 
         if isinstance(rule, type) and issubclass(rule, Enum):
             # unpack enum values into literal
