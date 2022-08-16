@@ -70,8 +70,8 @@ if t.TYPE_CHECKING:
 else:
     Not = _Not
     Regex = _Regex
-SPACE = Regex[str, r'\s*']
-REQUIRED_SPACE = Regex[str, r'\s+']
+
+SPACE = Regex[str, r'\s+']
 
 ### Packrat memoization data types
 
@@ -181,6 +181,9 @@ class Parser:
                 return None
             else:
                 raise Failed(f'Expected not to parse {rule!r} at {self.strpos}')
+
+        if rule != SPACE: # don't skip spaces before checking for them
+            self.skip_spaces()
 
         if isinstance(rule, type) and issubclass(rule, Enum):
             # unpack enum values into literal
