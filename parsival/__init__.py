@@ -101,11 +101,11 @@ class Parser:
 
     @property
     def lineno(self) -> int:
-        return len(self.text[:self.pos].splitlines()) + 1
+        return len(self.text[:self.pos].split('\n'))
     @property
     def colno(self) -> int:
         m = list(re.compile('^', re.M).finditer(self.text, 0, self.pos))[-1]
-        return self.pos - m.start()
+        return self.pos - m.start() + 1
     @property
     def strpos(self) -> str:
         return f'line {self.lineno} col {self.colno}'
