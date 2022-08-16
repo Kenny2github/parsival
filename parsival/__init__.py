@@ -164,6 +164,9 @@ class Parser:
             rule = t.Literal[tuple(rule)] # type: ignore
             return self.apply_rule(rule, self.pos)
 
+        if rule is None:
+            return None
+
         if isinstance(rule, _Regex):
             match = rule.pattern.match(self.text, self.pos)
             if not match:
