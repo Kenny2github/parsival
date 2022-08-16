@@ -121,7 +121,7 @@ class Parser:
         return f'line {self.lineno} col {self.colno}'
 
     def __init__(self, text: str) -> None:
-        self.text = text
+        self.text = text.strip()
         self.annotations_cache = {}
         # type(None) is noticeably faster than lambda: None
         self.memo = defaultdict(type(None)) # type: ignore
