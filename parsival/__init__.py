@@ -164,13 +164,6 @@ class Parser:
             rule = t.Literal[tuple(rule)] # type: ignore
             return self.apply_rule(rule, self.pos)
 
-        if isinstance(rule, SkipSpaces):
-            with self.backtrack(reraise=True):
-                self.skip_spaces()
-                ans = self.apply_rule(rule.rule, self.pos)
-                self.skip_spaces()
-            return ans
-
         if isinstance(rule, _Regex):
             match = rule.pattern.match(self.text, self.pos)
             if not match:
