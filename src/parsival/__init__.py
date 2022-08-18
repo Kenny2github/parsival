@@ -72,6 +72,8 @@ else:
     Regex = _Regex
 
 SPACE = Regex[str, r'\s+']
+NO_LF = Regex[str, r'[\S\n]*']
+NO_SPACE = Not[SPACE]
 
 ### Packrat memoization data types
 
@@ -79,7 +81,7 @@ _AST = t.NewType('_AST', object)
 AST = t.Optional[_AST]
 AST_F = t.Union[AST, Failed]
 _Rule = t.NewType('_Rule', object)
-Rule = t.Union[type, _Rule]
+Rule = t.Union[type, _Rule, None]
 Pos = t.NewType('Pos', int)
 
 @dataclasses.dataclass
@@ -187,7 +189,7 @@ class Parser:
             else:
                 raise Failed(f'Expected not to parse {rule!r} at {self.strpos}')
 
-        if rule != SPACE: # don't skip spaces before checking for them
+        if rule not in {SPACE, NO_LF}: # don't skip spaces before checking for them
             self.skip_spaces()
 
         if isinstance(rule, type) and issubclass(rule, Enum):
