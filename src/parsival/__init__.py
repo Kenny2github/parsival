@@ -88,7 +88,7 @@ else:
     Regex = _Regex
 
 SPACE = Regex[str, r'\s+']
-NO_LF_SPACE = Regex[str, r'[\S\n]*']
+NO_LF_SPACE = Regex[str, r'[^\S\n]*']
 NO_SPACE = Not[SPACE]
 
 ### Packrat memoization data types
