@@ -18,6 +18,10 @@ class Commit(Enum):
     """Commit to parsing this rule; do not try alternatives."""
     COMMIT = None # quick & easy singleton
 
+class Here(Enum):
+    """Apply the annotated rule here; discard all other tuple elements."""
+    HERE = None
+
 ### t.Annotated-like rules
 
 # get_type_hints() fails when InitVar is involved without this monkeypatch
@@ -263,7 +267,7 @@ class Parser:
 
         if t.get_origin(rule) is t.Annotated:
             rule, *args = t.get_args(rule)
-            if t.get_origin(rule) is list:
+            if t.get_origin(rule) is list and args[0] in set('*+'):
                 # potentially multiple of the argument
                 rule, = t.get_args(rule) # rule is now the rule to repeat
                 values: list[t.Any] = []
@@ -281,18 +285,40 @@ class Parser:
                         except Failed:
                             break
                 if len(args) >= 1:
-                    try:
-                        min_len = {
-                            '*': 0,
-                            '+': 1,
-                        }[args[0]]
-                    except KeyError:
-                        raise TypeError('List annotation must be either * or +') from None
+                    min_len = {
+                        '*': 0,
+                        '+': 1,
+                    }[args[0]]
                 else:
                     min_len = 0
                 if len(values) < min_len:
                     raise Failed(f'Failed to match at least {min_len} of {rule!r} at {self.strpos}')
                 return t.cast(AST, values)
+            elif t.get_origin(args[0]) is tuple:
+                # ordered sequence of rules, of which one is captured
+                value = None
+                here_found = False
+                committed = False
+                for annotation in t.get_args(args[0]):
+                    if self.unpeel_initvar(annotation) is Commit:
+                        committed = True
+                        continue
+                    if annotation is Here and here_found:
+                        raise TypeError('Only allowed one Here per tuple annotation')
+                    try:
+                        if annotation is Here:
+                            value = self.apply_rule(rule, self.pos)
+                            here_found = True
+                        else:
+                            self.apply_rule(annotation, self.pos)
+                    except Failed as exc:
+                        if committed:
+                            raise FailedToCommit(str(exc)) from exc
+                        else:
+                            raise
+                if not here_found:
+                    raise TypeError('Must have a Here in the tuple annotation')
+                return value
 
         rule = t.cast(type, rule)
         kwargs: dict[str, t.Any] = {}
