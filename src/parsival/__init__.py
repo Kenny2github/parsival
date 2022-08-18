@@ -242,7 +242,7 @@ class Parser:
             rule, *args = t.get_args(rule)
             if t.get_origin(rule) is list:
                 # potentially multiple of the argument
-                rule, = t.get_args(rule) # cls is now the actual type
+                rule, = t.get_args(rule) # rule is now the rule to repeat
                 values: list[t.Any] = []
                 while 1:
                     try:
@@ -251,7 +251,12 @@ class Parser:
                     except Failed:
                         break
                     values.append(value)
-                # default
+                    if len(args) >= 2:
+                        try:
+                            with self.backtrack(reraise=True):
+                                self.apply_rule(args[1], self.pos)
+                        except Failed:
+                            break
                 if len(args) >= 1:
                     try:
                         min_len = {
