@@ -89,6 +89,7 @@ else:
 
 SPACE = Regex[str, r'\s+']
 NO_LF_SPACE = Regex[str, r'[^\S\n]+']
+NEWLINE = t.Literal['\n']
 NO_SPACE = Not[SPACE]
 
 ### Packrat memoization data types
@@ -139,7 +140,7 @@ class Parser:
         return f'line {self.lineno} col {self.colno}'
 
     def __init__(self, text: str) -> None:
-        self.text = text.strip()
+        self.text = text
         self.annotations_cache = {}
         # type(None) is noticeably faster than lambda: None
         self.memo = defaultdict(type(None)) # type: ignore
@@ -151,6 +152,7 @@ class Parser:
             ans = self.apply_rule(top_level, self.pos)
         except Failed as exc:
             raise SyntaxError(f'Failed to parse: {exc!s}') from exc
+        self.skip_spaces()
         if raise_on_unconsumed and self.pos < len(self.text):
             raise SyntaxError(f'Data remains after parse: {self.text[self.pos:]!r}')
         return ans
@@ -214,7 +216,8 @@ class Parser:
             finally:
                 self.pos = start
 
-        if rule not in {SPACE, NO_LF_SPACE}: # don't skip spaces before checking for them
+        # don't skip spaces before checking for them
+        if rule not in {SPACE, NO_LF_SPACE, NEWLINE}:
             self.skip_spaces()
 
         if isinstance(rule, type) and issubclass(rule, Enum):
