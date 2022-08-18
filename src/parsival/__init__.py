@@ -172,6 +172,10 @@ class Parser:
     def try_rule(self, rule: Rule) -> AST:
         rule = self.unpeel_initvar(rule)
 
+        if isinstance(rule, str):
+            raise TypeError(f'{rule!r} is not a valid rule. '
+                            f'Did you mean Literal[{rule!r}]?')
+
         if isinstance(rule, _Not):
             # Not might check against spaces, so check before skipping them.
             # If rule.rule isn't SPACE, they will get skipped later.
