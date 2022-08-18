@@ -64,11 +64,23 @@ class _Not(_RuleAnnotation, t.Generic[T]):
     def __class_getitem__(cls, rule: T) -> _Not[T]:
         return cls(rule)
 
+class _Lookahead(_RuleAnnotation, t.Generic[T]):
+    rule: T
+
+    def __init__(self, rule: T) -> None:
+        super().__init__(rule)
+        self.rule = rule
+
+    def __class_getitem__(cls, rule: T) -> _Lookahead[T]:
+        return cls(rule)
+
 if t.TYPE_CHECKING:
     Not = t.Optional # since successful parse returns None
+    Lookahead = t.Optional # since successful parse returns the expression
     Regex = t.Annotated
 else:
     Not = _Not
+    Lookahead = _Lookahead
     Regex = _Regex
 
 SPACE = Regex[str, r'\s+']
@@ -188,6 +200,15 @@ class Parser:
                 return None
             else:
                 raise Failed(f'Expected not to parse {rule!r} at {self.strpos}')
+
+        if isinstance(rule, _Lookahead):
+            # Same note as for Not
+            rule = rule.rule
+            start = self.pos
+            try:
+                return self.apply_rule(rule, self.pos)
+            finally:
+                self.pos = start
 
         if rule not in {SPACE, NO_LF}: # don't skip spaces before checking for them
             self.skip_spaces()
