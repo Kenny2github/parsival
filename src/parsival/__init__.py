@@ -88,7 +88,7 @@ else:
     Regex = _Regex
 
 SPACE = Regex[str, r'\s+']
-NO_LF = Regex[str, r'[\S\n]*']
+NO_LF_SPACE = Regex[str, r'[\S\n]*']
 NO_SPACE = Not[SPACE]
 
 ### Packrat memoization data types
@@ -214,7 +214,7 @@ class Parser:
             finally:
                 self.pos = start
 
-        if rule not in {SPACE, NO_LF}: # don't skip spaces before checking for them
+        if rule not in {SPACE, NO_LF_SPACE}: # don't skip spaces before checking for them
             self.skip_spaces()
 
         if isinstance(rule, type) and issubclass(rule, Enum):
