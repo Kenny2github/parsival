@@ -162,8 +162,11 @@ class Parser:
                 self.pos = start
 
         # don't skip spaces before checking for them
-        if rule not in {SPACE, NO_LF_SPACE, NEWLINE}:
+        if not (isinstance(rule, type) and issubclass(rule, (
+                SPACE, NO_LF_SPACE, NEWLINE))):
             self.skip_spaces()
+        else:
+            rule = self.get_annotation(rule, 'text')
 
         if isinstance(rule, type) and issubclass(rule, Enum):
             # unpack enum values into literal
