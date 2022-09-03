@@ -28,8 +28,9 @@ dynamic = ["version"]
 [project.urls]
 Source = "https://github.com/Kenny2github/parsival"
 
-[tool.setuptools]
-packages = ["parsival"]
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["parsival", "parsival.peg_grammar"]
 
 [tool.setuptools.dynamic]
 version = {attr = "parsival.__version__"}
