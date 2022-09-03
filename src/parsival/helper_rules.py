@@ -17,6 +17,9 @@ __all__ = [
     'NEWLINE',
     'NO_SPACE',
     'ENDMARKER',
+    'Indent',
+    'INDENT',
+    'DEDENT',
 ]
 
 class _RuleAnnotation:
@@ -115,3 +118,34 @@ class ENDMARKER:
     """Assert position at the end of the file."""
     _end: InitVar[Regex[str, r'\Z']]
 
+# The INDENT rule.
+
+class Indent(Enum):
+    """Subclass this to define a different indent format.
+
+    Required:
+
+    * An ``indent`` rule defining the indentation to check. This will be pushed
+      onto the indentation stack whenever this rule is encountered.
+    * An ``INDENT`` enum value defining the singleton to capture. This will be
+      passed to the class for whatever rule includes the indent.
+    """
+
+class INDENT(Indent):
+    """The INDENT rule: Push the ``indent`` rule onto the indentation stack.
+
+    .. warning::
+        When using ``INDENT``, at least one indentation is required before the
+        end of the block. This is similar to how in Python, an ``if cond:``
+        statement with no body is illegal - it's because an indent is required.
+        (Note, however, that due to a parser quirk, an INDENT rule followed by
+        a single indentation and nothing else is allowed.)
+    """
+    indent: Regex[str, r'(\s*\n)*( {4}|\t)']
+    INDENT = None
+
+class DEDENT(Enum):
+    """The DEDENT token: Pop off the indentation stack.
+    There is no need to subclass this.
+    """
+    DEDENT = None

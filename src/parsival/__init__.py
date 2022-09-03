@@ -7,7 +7,7 @@ from enum import Enum
 from contextlib import contextmanager
 
 from .helper_rules import (
-    _Regex, _Not, _Lookahead, SPACE, NO_LF_SPACE, NEWLINE
+    _Regex, _Not, _Lookahead, SPACE, NO_LF_SPACE, NEWLINE, Indent, DEDENT
 )
 
 __version__ = '0.0.0a0'
@@ -74,6 +74,9 @@ class Parser:
     memo: defaultdict[tuple[Rule, Pos], t.Optional[MemoEntry]]
     lr_stack: t.Optional[LR] = None
     heads: defaultdict[int, t.Optional[Head]]
+    # indentation mechanics
+    indentation_stack: list[Rule]
+    newlined: bool = False
 
     @property
     def lineno(self) -> int:
@@ -89,6 +92,7 @@ class Parser:
     def __init__(self, text: str) -> None:
         self.text = text
         self.annotations_cache = {}
+        self.indentation_stack = []
         # type(None) is noticeably faster than lambda: None
         self.memo = defaultdict(type(None)) # type: ignore
         self.heads = defaultdict(type(None))  # type: ignore
@@ -107,10 +111,12 @@ class Parser:
     @contextmanager
     def backtrack(self, *, reraise: bool = False):
         start = self.pos
+        newlined = self.newlined
         try:
             yield start
         except Failed:
             self.pos = start
+            self.newlined = newlined
             if reraise:
                 raise
 
@@ -162,6 +168,29 @@ class Parser:
                 return self.apply_rule(rule, self.pos)
             finally:
                 self.pos = start
+
+        if isinstance(rule, type) and issubclass(rule, Indent):
+            # Check for new indentations before checking for existing ones
+            self.indentation_stack.append(self.get_annotation(rule, 'indent'))
+            # protocol requires that INDENT attribute be defined
+            return rule.INDENT # type: ignore
+
+        if isinstance(rule, type) and issubclass(rule, DEDENT):
+            # Check for removed indentation before checking for indentation
+            self.indentation_stack.pop()
+            return rule.DEDENT # type: ignore
+
+        # skip (likely space-based) indentation before skipping spaces
+        if self.newlined:
+            self.newlined = False # to prevent infinite indentation recursion
+            # N.B. context manager outside loop so that any indentation rule
+            # failure makes the entire indentation check fail
+            with self.backtrack(reraise=True):
+                for indent in self.indentation_stack:
+                    try:
+                        self.apply_rule(indent, self.pos)
+                    except Failed:
+                        raise Failed(f'Expected indentation of {indent!r} at {self.strpos}')
 
         # don't skip spaces before checking for them
         if not (isinstance(rule, type) and issubclass(rule, (
@@ -301,6 +330,8 @@ class Parser:
                 print(f'{self.strpos}: Failure of {rule!r}\n\t{exc!s}')
             return exc
         else:
+            if self.unpeel_initvar(rule) is NEWLINE:
+                self.newlined = True
             if DEBUG:
                 print(f'{self.strpos}: Success with {rule!r}\n\t{ans!r}')
         return ans
