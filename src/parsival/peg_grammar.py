@@ -48,9 +48,8 @@ class BracketOpt:
 
 Item = Union[BracketOpt, Quantifier, Gather, Atom]
 
-@dataclass
-class Cut:
-    _cut: InitVar[Literal['~']]
+class Cut(Enum):
+    CUT = '~'
 
 class LookaheadType(Enum):
     POSITIVE = '&'
