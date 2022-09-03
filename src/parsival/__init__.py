@@ -6,6 +6,8 @@ import dataclasses
 from enum import Enum
 from contextlib import contextmanager
 
+__version__ = '0.0.0a0'
+
 Annotations = dict[str, t.Union[t.Any, type]]
 
 class Failed(SyntaxError):
