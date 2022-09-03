@@ -4,7 +4,8 @@ from dataclasses import InitVar, dataclass
 from enum import Enum
 from typing import Annotated, Literal, Optional, Union
 
-from parsival import NEWLINE, NO_LF_SPACE, Commit, Failed, Here, Regex, parse
+from parsival import Commit, Failed, Here, parse
+from parsival.helper_rules import NEWLINE, NO_LF_SPACE, Regex
 
 NAME = Regex[str, r'[a-zA-Z_][a-zA-Z_0-9]*']
 STRING = Regex[str, r"'(?:[^'\\]|\\(?:\\\\)*.)*'"
