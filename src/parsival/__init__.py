@@ -179,13 +179,14 @@ class Parser:
         if isinstance(rule, _Regex):
             match = rule.pattern.match(self.text, self.pos)
             if not match:
-                raise Failed(f'Expecting regex r"""{rule.pattern.pattern!s}""" to match at {self.strpos}')
+                raise Failed(f'Expected regex r"""{rule.pattern.pattern!s}""" to match at {self.strpos}')
             self.pos = Pos(match.end())
-            return rule.converter(match.group(0))
+            return t.cast(AST, match.group(0))
 
         if t.get_origin(rule) is t.Literal:
             # try each literal in turn
-            rule = t.cast(type[t.Literal], rule)
+            if t.TYPE_CHECKING:
+                rule = t.cast(type[t.Literal], rule)
             literal_values: tuple[str, ...] = t.get_args(rule)
             for literal_value in literal_values:
                 result = literal_value  # so that we return the enum object
