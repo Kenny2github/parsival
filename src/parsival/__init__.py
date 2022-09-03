@@ -12,6 +12,8 @@ from .helper_rules import (
 
 __version__ = '0.0.0a0'
 
+DEBUG: bool = False
+
 Annotations = dict[str, t.Union[t.Any, type]]
 
 class Failed(SyntaxError):
@@ -290,10 +292,18 @@ class Parser:
         return rule(**kwargs)
 
     def eval_(self, rule: Rule) -> AST_F:
+        if DEBUG:
+            print(f'{self.strpos}: Trying {rule!r}')
         try:
-            return self.try_rule(rule)
+            ans = self.try_rule(rule)
         except Failed as exc:
+            if DEBUG:
+                print(f'{self.strpos}: Failure of {rule!r}\n\t{exc!s}')
             return exc
+        else:
+            if DEBUG:
+                print(f'{self.strpos}: Success with {rule!r}\n\t{ans!r}')
+        return ans
 
     def apply_rule(self, rule: Rule, pos: Pos) -> AST:
         ans = self.apply_rule_inner(rule, pos)
