@@ -6,6 +6,10 @@ import dataclasses
 from enum import Enum
 from contextlib import contextmanager
 
+from .helper_rules import (
+    _Regex, _Not, _Lookahead, SPACE, NO_LF_SPACE, NEWLINE
+)
+
 __version__ = '0.0.0a0'
 
 Annotations = dict[str, t.Union[t.Any, type]]
@@ -29,70 +33,6 @@ class Here(Enum):
 # get_type_hints() fails when InitVar is involved without this monkeypatch
 # adapted from https://stackoverflow.com/a/70430449/6605349
 dataclasses.InitVar.__call__ = lambda *_: None # type: ignore
-
-class _RuleAnnotation:
-    args: tuple
-
-    def __init__(self, *args) -> None:
-        self.args = args
-
-    def __call__(self, *args: t.Any, **kwds: t.Any) -> t.Any:
-        pass
-
-    def __repr__(self) -> str:
-        return f'{type(self).__qualname__}[' + ', '.join(map(repr, self.args)) + ']'
-
-    def __class_getitem__(cls, arg: tuple):
-        return cls(*arg)
-
-class _Regex(_RuleAnnotation):
-    converter: t.Callable[[str], t.Any]
-    pattern: re.Pattern[str]
-
-    def __init__(self, converter: t.Callable[[str], t.Any],
-                 pattern: str, flags: int = 0) -> None:
-        super().__init__(converter, pattern, flags)
-        self.converter = converter
-        self.pattern = re.compile(pattern, flags)
-
-    def __repr__(self) -> str:
-        return f'parsival.Regex[{self.converter!r}, r"""{self.pattern.pattern}""", {self.pattern.flags}]'
-
-T = t.TypeVar('T')
-
-class _Not(_RuleAnnotation, t.Generic[T]):
-    rule: T
-
-    def __init__(self, rule: T) -> None:
-        super().__init__(rule)
-        self.rule = rule
-
-    def __class_getitem__(cls, rule: T) -> _Not[T]:
-        return cls(rule)
-
-class _Lookahead(_RuleAnnotation, t.Generic[T]):
-    rule: T
-
-    def __init__(self, rule: T) -> None:
-        super().__init__(rule)
-        self.rule = rule
-
-    def __class_getitem__(cls, rule: T) -> _Lookahead[T]:
-        return cls(rule)
-
-if t.TYPE_CHECKING:
-    Not = t.Optional # since successful parse returns None
-    Lookahead = t.Optional # since successful parse returns the expression
-    Regex = t.Annotated
-else:
-    Not = _Not
-    Lookahead = _Lookahead
-    Regex = _Regex
-
-SPACE = Regex[str, r'\s+']
-NO_LF_SPACE = Regex[str, r'[^\S\n]+']
-NEWLINE = t.Literal['\n']
-NO_SPACE = Not[SPACE]
 
 ### Packrat memoization data types
 
@@ -123,9 +63,12 @@ class Head:
 
 class Parser:
 
+    # basic attributes
     text: str
     pos: Pos = Pos(0)
+    # my own cache, to avoid repeated get_type_hints() calls
     annotations_cache: dict[type, dict[str, t.Any]]
+    # data for packrat memoization
     memo: defaultdict[tuple[Rule, Pos], t.Optional[MemoEntry]]
     lr_stack: t.Optional[LR] = None
     heads: defaultdict[int, t.Optional[Head]]
