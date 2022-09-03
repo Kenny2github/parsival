@@ -163,9 +163,11 @@ if __name__ == '__main__':
         from pprint import pprint
     else:
         install_extras(include=frozenset({'dataclasses'}))
-    with open('parsival/python.gram') as f:
+    with open('src/parsival/grammar.gram') as f:
         text = f.read()
     try:
+        import parsival, sys
+        parsival.DEBUG = '--debug' in sys.argv
         pprint(parse(text, Start))
-    except (SyntaxError, Failed):
-        print('Failed')
+    except (SyntaxError, Failed) as exc:
+        print('Failed:', str(exc)[:50])
