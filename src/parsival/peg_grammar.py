@@ -8,8 +8,10 @@ from parsival import Commit, Failed, Here, parse
 from parsival.helper_rules import NEWLINE, NO_LF_SPACE, Regex
 
 NAME = Regex[str, r'[a-zA-Z_][a-zA-Z_0-9]*']
-STRING = Regex[str, r"'(?:[^'\\]|\\(?:\\\\)*.)*'"
-               + r'|"(?:[^"\\]|\\(?:\\\\)*.)*"']
+@dataclass
+class STRING:
+    string: Regex[str, r"'(?:[^'\\]|\\(?:\\\\)*.)*'"
+                  + r'|"(?:[^"\\]|\\(?:\\\\)*.)*"']
 
 @dataclass
 class Grouped:
