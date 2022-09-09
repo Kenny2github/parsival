@@ -120,32 +120,35 @@ class ENDMARKER:
 
 # The INDENT rule.
 
-class Indent(Enum):
-    """Subclass this to define a different indent format.
+@t.runtime_checkable
+class Indent(t.Protocol):
+    """The protocol to define an indent format."""
 
-    Required:
+    @classmethod
+    def indent(cls) -> Rule:
+        """The rule defining the indentation to check."""
+        raise NotImplementedError
 
-    * An ``indent`` rule defining the indentation to check. This will be pushed
-      onto the indentation stack whenever this rule is encountered.
-    * An ``INDENT`` enum value defining the singleton to capture. This will be
-      passed to the class for whatever rule includes the indent.
-    """
+class SpaceOrTabIndent(Indent):
 
-class INDENT(Indent):
-    """The INDENT rule: Push the ``indent`` rule onto the indentation stack.
+    @classmethod
+    def indent(cls) -> Rule:
+        return Regex[str, r'(\s*\n)*( {4}|\t)']
+
+class INDENT(Enum):
+    """The INDENT rule: Assert an increase in indentation at this position.
 
     .. warning::
         When using ``INDENT``, at least one indentation is required before the
         end of the block. This is similar to how in Python, an ``if cond:``
         statement with no body is illegal - it's because an indent is required.
-        (Note, however, that due to a parser quirk, an INDENT rule followed by
-        a single indentation and nothing else is allowed.)
+        (Note, however, that an empty block is allowed as long as it contains
+        at least one indent.)
     """
-    indent: Regex[str, r'(\s*\n)*( {4}|\t)']
     INDENT = None
 
 class DEDENT(Enum):
-    """The DEDENT token: Pop off the indentation stack.
+    """The DEDENT token: Assert a decrease in indentation at this position.
     There is no need to subclass this.
     """
     DEDENT = None

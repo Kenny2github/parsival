@@ -7,7 +7,8 @@ from enum import Enum
 from contextlib import contextmanager
 
 from .helper_rules import (
-    _Regex, _Not, _Lookahead, SPACE, NO_LF_SPACE, NEWLINE, Indent, DEDENT
+    _Regex, _Not, _Lookahead, SPACE, NO_LF_SPACE, NEWLINE,
+    Indent, INDENT, DEDENT, SpaceOrTabIndent
 )
 
 __all__ = [
@@ -85,8 +86,9 @@ class Parser:
     lr_stack: t.Optional[LR] = None
     heads: defaultdict[int, t.Optional[Head]]
     # indentation mechanics
-    indentation_stack: list[Rule]
-    newlined: bool = False
+    indent_skips: dict[Pos, Pos]
+    indent_positions: dict[Pos, type[t.Union[INDENT, DEDENT]]]
+    skipping_spaces: bool = True
 
     @property
     def lineno(self) -> int:
@@ -99,13 +101,21 @@ class Parser:
     def strpos(self) -> str:
         return f'line {self.lineno} col {self.colno}'
 
-    def __init__(self, text: str) -> None:
+    def __init__(self, text: str, indent: t.Optional[type[Indent]] = None) -> None:
         self.text = text
         self.annotations_cache = {}
-        self.indentation_stack = []
+        self.indent_skips = {}
+        self.indent_positions = {}
         # type(None) is noticeably faster than lambda: None
         self.memo = defaultdict(type(None)) # type: ignore
-        self.heads = defaultdict(type(None))  # type: ignore
+        self.heads = defaultdict(type(None)) # type: ignore
+        if indent is not None:
+            self.generate_indents(indent)
+            self.memo.clear()
+            self.heads.clear()
+            self.lr_stack = None
+            if DEBUG:
+                print(' Generated indents '.center(79))
 
     def parse(self, top_level: Rule, raise_on_unconsumed: bool = True) -> AST:
         self.pos = Pos(0)
@@ -121,14 +131,43 @@ class Parser:
     @contextmanager
     def backtrack(self, *, reraise: bool = False):
         start = self.pos
-        newlined = self.newlined
         try:
             yield start
         except Failed:
             self.pos = start
-            self.newlined = newlined
             if reraise:
                 raise
+
+    @contextmanager
+    def no_skip_spaces(self):
+        try:
+            self.skipping_spaces = False
+            yield
+        finally:
+            self.skipping_spaces = True
+
+    def generate_indents(self, indent: type[Indent]) -> None:
+        self.pos = Pos(0)
+        current_indent = 0
+        for match in re.finditer('^', self.text, re.M):
+            start = self.pos = Pos(match.start())
+            with self.backtrack(), self.no_skip_spaces():
+                indent_count = 0
+                while 1:
+                    try:
+                        with self.backtrack(reraise=True):
+                            self.apply_rule(indent.indent(), self.pos)
+                    except Failed:
+                        break
+                    else:
+                        indent_count += 1
+                if indent_count > current_indent:
+                    self.indent_positions[start] = INDENT
+                elif indent_count < current_indent:
+                    self.indent_positions[start] = DEDENT
+                current_indent = indent_count
+                if self.pos != start:
+                    self.indent_skips[start] = self.pos
 
     def get_annotations(self, cls: type) -> dict[str, t.Any]:
         """Get the annotations of a class.
@@ -155,6 +194,20 @@ class Parser:
     def try_rule(self, rule: Rule) -> AST:
         rule = self.unpeel_initvar(rule)
 
+        try:
+            # process indents before skipping them
+            if rule is INDENT:
+                if self.indent_positions.get(self.pos) is not INDENT:
+                    raise Failed(f'Expected indent at {self.strpos}')
+                return INDENT.INDENT  # type: ignore
+
+            if rule is DEDENT:
+                if self.indent_positions.get(self.pos) is not DEDENT:
+                    raise Failed(f'Expected dedent at {self.strpos}')
+                return DEDENT.DEDENT  # type: ignore
+        finally:
+            self.pos = self.indent_skips.get(self.pos, self.pos)
+
         if isinstance(rule, str):
             raise TypeError(f'{rule!r} is not a valid rule. '
                             f'Did you mean Literal[{rule!r}]?')
@@ -179,43 +232,46 @@ class Parser:
             finally:
                 self.pos = start
 
-        if isinstance(rule, type) and issubclass(rule, Indent):
-            # Check for new indentations before checking for existing ones
-            self.indentation_stack.append(self.get_annotation(rule, 'indent'))
-            # protocol requires that INDENT attribute be defined
-            return rule.INDENT # type: ignore
+        # don't skip spaces before a none match (to prevent changing position)
+        if rule is None or rule is type(None):
+            return None
 
-        if isinstance(rule, type) and issubclass(rule, DEDENT):
-            # Check for removed indentation before checking for indentation
-            self.indentation_stack.pop()
-            return rule.DEDENT # type: ignore
+        # check union before skipping spaces,
+        # so that each individual rule can decide whether to skip or not
+        if t.get_origin(rule) is t.Union:
+            union_args = t.get_args(t.cast(t.Union, rule))
+            for union_arg in union_args:
+                try:
+                    with self.backtrack(reraise=True):
+                        return self.apply_rule(union_arg, self.pos)
+                except FailedToCommit as exc:
+                    raise Failed(
+                        f'Expecting {union_arg} at {self.strpos}') from exc
+                except Failed:
+                    pass  # try next
+            else:
+                raise Failed(f'Expecting one of {union_args} at {self.strpos}')
 
-        # skip (likely space-based) indentation before skipping spaces
-        if self.newlined:
-            self.newlined = False # to prevent infinite indentation recursion
-            # N.B. context manager outside loop so that any indentation rule
-            # failure makes the entire indentation check fail
-            with self.backtrack(reraise=True):
-                for indent in self.indentation_stack:
-                    try:
-                        self.apply_rule(indent, self.pos)
-                    except Failed:
-                        raise Failed(f'Expected indentation of {indent!r} at {self.strpos}')
+        ## ALL RULES BEFORE THIS LINE HAVE REASON TO BE CHECKED BEFORE SKIPPING SPACES ##
 
         # don't skip spaces before checking for them
-        if not (isinstance(rule, type) and issubclass(rule, (
-                SPACE, NO_LF_SPACE, NEWLINE))):
-            self.skip_spaces()
-        else:
+        if self.skipping_spaces:
+            if not (isinstance(rule, type) and issubclass(rule, (
+                    SPACE, NO_LF_SPACE, NEWLINE))):
+                self.skip_spaces()
+            else:
+                rule = self.get_annotation(rule, 'text')
+        elif isinstance(rule, type) and issubclass(rule, (
+                SPACE, NO_LF_SPACE, NEWLINE)):
+            # still need to extract the rule itself
             rule = self.get_annotation(rule, 'text')
+
+        ## ALL RULES AFTER THIS LINE WILL HAVE SPACES ALREADY SKIPPED ##
 
         if isinstance(rule, type) and issubclass(rule, Enum):
             # unpack enum values into literal
             rule = t.Literal[tuple(rule)] # type: ignore
             return self.apply_rule(rule, self.pos)
-
-        if rule is None:
-            return None
 
         if isinstance(rule, _Regex):
             match = rule.pattern.match(self.text, self.pos)
@@ -241,26 +297,13 @@ class Parser:
                 raise Failed(
                     f'Expecting one of {literal_values} at {self.strpos}')
 
-        if t.get_origin(rule) is t.Union:
-            union_args = t.get_args(t.cast(t.Union, rule))
-            for union_arg in union_args:
-                try:
-                    with self.backtrack(reraise=True):
-                        return self.apply_rule(union_arg, self.pos)
-                except FailedToCommit as exc:
-                    raise Failed(f'Expecting {union_arg} at {self.strpos}') from exc
-                except Failed:
-                    pass # try next
-            else:
-                raise Failed(f'Expecting one of {union_args} at {self.strpos}')
-
         if t.get_origin(rule) is list:
             # for use in next clause
             rule = t.Annotated[rule, '*'] # type: ignore
 
         if t.get_origin(rule) is t.Annotated:
             rule, *args = t.get_args(rule)
-            if t.get_origin(rule) is list and args[0] in set('*+'):
+            if t.get_origin(rule) is list and args[0] in {'*', '+'}:
                 # potentially multiple of the argument
                 rule, = t.get_args(rule) # rule is now the rule to repeat
                 values: list[t.Any] = []
@@ -340,8 +383,6 @@ class Parser:
                 print(f'{self.strpos}: Failure of {rule!r}\n\t{exc!s}')
             return exc
         else:
-            if self.unpeel_initvar(rule) is NEWLINE:
-                self.newlined = True
             if DEBUG:
                 print(f'{self.strpos}: Success with {rule!r}\n\t{ans!r}')
         return ans
@@ -452,5 +493,11 @@ class Parser:
         self.pos = m.pos
         return m.ans
 
-def parse(text: str, top_level: t.Any, raise_on_unconsumed: bool = True) -> AST:
-    return Parser(text).parse(top_level, raise_on_unconsumed)
+def parse(
+    text: str,
+    top_level: t.Any,
+    *,
+    raise_on_unconsumed: bool = True,
+    indent: t.Optional[type[Indent]] = SpaceOrTabIndent
+) -> AST:
+    return Parser(text, indent=indent).parse(top_level, raise_on_unconsumed)
