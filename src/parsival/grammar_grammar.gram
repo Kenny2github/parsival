@@ -1,0 +1,42 @@
+start[Start]: grammar ENDMARKER
+
+grammar[Grammar]: metas=meta* rules=rule+
+
+meta[MetaTuple]: "@" meta_name=NAME meta_value=(value=NAME | value=STRING | value=NONE) NEWLINE
+
+rule[Rule]:
+    | rulename=rulename ":" alts=alts NEWLINE INDENT more_alts=more_alts DEDENT
+    | rulename=rulename ":" alts=NONE NEWLINE INDENT more_alts=more_alts DEDENT
+    | rulename=rulename ":" alts=alts NEWLINE more_alts=NONE
+
+rulename[RuleName]: name=NAME type=[ '[' type=NAME pointer='*'? ']' ]
+
+alts[Alts]: alts="|".alt+
+
+more_alts[MoreAlts]: "|" alts=alts NEWLINE more_alts=more_alts?
+
+alt[Alt]: items=NO_LF_SPACE.named_item+ ending='$'?
+
+named_item[NamedItem]:
+    | name=NAME '=' ~ item=item
+    | item=item
+    | item=lookahead
+
+lookahead[LookaheadOrCut]:
+    | type='&' ~ atom=atom
+    | type='!' ~ atom=atom
+    | type='~'
+
+item[Item]: node=bracket_opt | node=quantifier | node=separated_quantifier | node=atom
+
+bracket_opt[BracketOpt]: '[' ~ alts=alts ']'
+
+quantifier[Quantifier]: node=atom quantifier=( '?' | '*' | '+' )
+
+separated_quantifier[SeparatedQuantifier]: sep=atom '.' node=atom '+'
+
+atom[Plain]: atom=grouped_alts | atom=regex | atom=NAME | atom=STRING
+
+grouped_alts[Grouped]: '(' ~ alts=alts ')'
+
+regex[RegexLiteral]: 'r' NO_SPACE pattern=STRING
