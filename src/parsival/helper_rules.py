@@ -20,6 +20,7 @@ __all__ = [
     'NAME',
     'STRING',
     'Indent',
+    'SpaceOrTabIndent',
     'INDENT',
     'DEDENT',
 ]
