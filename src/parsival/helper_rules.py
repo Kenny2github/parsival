@@ -17,6 +17,8 @@ __all__ = [
     'NEWLINE',
     'NO_SPACE',
     'ENDMARKER',
+    'NAME',
+    'STRING',
     'Indent',
     'INDENT',
     'DEDENT',
@@ -117,6 +119,23 @@ class NO_SPACE:
 class ENDMARKER:
     """Assert position at the end of the file."""
     _end: InitVar[Regex[str, r'\Z']]
+
+# convenience rules for common tokens
+
+NAME = Regex[str, r'[a-zA-Z_][a-zA-Z_0-9]*']
+
+class STRING:
+    string: Regex[str, r"'(?:[^'\\]|\\(?:\\\\)*.)*'"
+                  + r'|"(?:[^"\\]|\\(?:\\\\)*.)*"']
+
+    def __init__(self, string: str) -> None:
+        self.string = eval(string)
+
+    def __repr__(self) -> str:
+        return f'STRING({self.string!r})'
+
+    def __str__(self) -> str:
+        return self.string
 
 # The INDENT rule.
 
