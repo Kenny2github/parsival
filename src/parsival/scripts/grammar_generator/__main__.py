@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import io
 import argparse
-from grammar_generator.gram_to_py import capture_main as gram_to_py
+from parsival.scripts.grammar_generator.gram_to_py import capture_main as gram_to_py
 
 parser = argparse.ArgumentParser(
     description='Generate a grammar module from a grammar file.')
@@ -31,10 +31,10 @@ with infile:
 
 module = gram_to_py(grammar)
 if cmdargs.postprocess:
-    from grammar_generator.postprocess import main as postprocess
+    from parsival.scripts.grammar_generator.postprocess import main as postprocess
     module = postprocess(io.StringIO(module))
 if cmdargs.indent:
-    from grammar_generator.custom_indent import main as postprocess
+    from parsival.scripts.grammar_generator.custom_indent import main as postprocess
     module = postprocess(io.StringIO(module), cmdargs.indent)
 
 if cmdargs.outfile == '-':
