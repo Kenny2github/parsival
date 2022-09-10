@@ -28,6 +28,15 @@ dynamic = ["version"]
 [project.urls]
 Source = "https://github.com/Kenny2github/parsival"
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+docs = [
+    "sphinx",
+    "furo",
+]
+
 [project.scripts]
 parsival-gramgen = "parsival.scripts.grammar_generator.__main__:main"
 
