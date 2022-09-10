@@ -98,10 +98,17 @@ def process_item(name: str, named_item: NamedItem) -> str:
 def process_rule(rulename: str, alts: list[Alt]) -> None:
 
     if len(alts) > 1: # union time
-        rulenames: list[str] = []
-        for i, alt in enumerate(alts, start=1):
-            rulenames.append(f'{rulename}_{i}')
-            process_rule(rulenames[-1], [alt])
+        rulenames: list[str]
+        if all(len(alt.items) == 1
+               and isinstance(alt.items[0].item, Item_4)
+               for alt in alts):
+            rulenames = [make_annotation(f'{rulename}_{i}', alt.items[0].item)
+                         for i, alt in enumerate(alts, start=1)]
+        else:
+            rulenames = []
+            for i, alt in enumerate(alts, start=1):
+                rulenames.append(f'{rulename}_{i}')
+                process_rule(rulenames[-1], [alt])
         print(f'\n{rulename} = Union[{", ".join(rulenames)}]')
     else:
         alt = alts[0]
@@ -166,7 +173,7 @@ def main(text: str) -> None:
         else:
             rules[name] = alts
 
-    for name, alts in rules.items():
+    for name, alts in reversed(rules.items()):
         process_rule(name, alts)
 
     print_footer()
