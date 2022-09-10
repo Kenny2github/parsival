@@ -1,89 +1,74 @@
 from __future__ import annotations
 from typing import Literal, Annotated, Union, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, InitVar
 from parsival import Commit
 from parsival.helper_rules import *
 
-@dataclass
-class Start:
-    item_1: Grammar
-    item_2: ENDMARKER
+class CustomIndent(Indent):
+
+    @classmethod
+    def indent(cls) -> parsival.Rule:
+        return SpaceOrTabIndent.indent()
 
 @dataclass
-class Grammar:
-    metas: list[MetaTuple]
-    rules: Annotated[list[Rule], "+"]
+class RegexLiteral:
+    _item_1: InitVar[Literal['r']]
+    _item_2: InitVar[NO_SPACE]
+    pattern: STRING
 
 @dataclass
-class MetaTuple:
-    item_1: Literal['@']
-    meta_name: NAME
-    meta_value: Union[NAME, STRING, None]
-    item_4: NEWLINE
-
-@dataclass
-class Rule_1:
-    rulename: RuleName
-    item_2: Literal[':']
+class Grouped:
+    _item_1: InitVar[Literal['(']]
+    _item_2: InitVar[Commit]
     alts: Alts
-    item_4: NEWLINE
-    item_5: INDENT
-    more_alts: MoreAlts
-    item_7: DEDENT
+    _item_4: InitVar[Literal[')']]
+
+Plain = Union[Grouped, RegexLiteral, NAME, STRING]
 
 @dataclass
-class Rule_2:
-    rulename: RuleName
-    item_2: Literal[':']
-    alts: None
-    item_4: NEWLINE
-    item_5: INDENT
-    more_alts: MoreAlts
-    item_7: DEDENT
+class SeparatedQuantifier:
+    sep: Plain
+    _item_2: InitVar[Literal['.']]
+    node: Plain
+    _item_4: InitVar[Literal['+']]
 
 @dataclass
-class Rule_3:
-    rulename: RuleName
-    item_2: Literal[':']
+class Quantifier:
+    node: Plain
+    quantifier: Union[Literal['?'], Literal['*'], Literal['+']]
+
+@dataclass
+class BracketOpt:
+    _item_1: InitVar[Literal['[']]
+    _item_2: InitVar[Commit]
     alts: Alts
-    item_4: NEWLINE
-    more_alts: None
+    _item_4: InitVar[Literal[']']]
 
-Rule = Union[Rule_1, Rule_2, Rule_3]
-
-@dataclass
-class Type:
-    item_1: Literal['[']
-    type: NAME
-    pointer: Optional[Literal['*']]
-    item_4: Literal[']']
+Item = Union[BracketOpt, Quantifier, SeparatedQuantifier, Plain]
 
 @dataclass
-class RuleName:
-    name: NAME
-    type: Optional[Type]
+class LookaheadOrCut_1:
+    type: Literal['&']
+    _item_2: InitVar[Commit]
+    atom: Plain
 
 @dataclass
-class Alts:
-    alts: Annotated[list[Alt], "+", Literal['|']]
+class LookaheadOrCut_2:
+    type: Literal['!']
+    _item_2: InitVar[Commit]
+    atom: Plain
 
 @dataclass
-class MoreAlts:
-    item_1: Literal['|']
-    alts: Alts
-    item_3: NEWLINE
-    more_alts: Optional[MoreAlts]
+class LookaheadOrCut_3:
+    type: Literal['~']
 
-@dataclass
-class Alt:
-    items: Annotated[list[NamedItem], "+", NO_LF_SPACE]
-    ending: Optional[Literal['$']]
+LookaheadOrCut = Union[LookaheadOrCut_1, LookaheadOrCut_2, LookaheadOrCut_3]
 
 @dataclass
 class NamedItem_1:
     name: NAME
-    item_2: Literal['=']
-    item_3: Commit
+    _item_2: InitVar[Literal['=']]
+    _item_3: InitVar[Commit]
     item: Item
 
 @dataclass
@@ -97,90 +82,79 @@ class NamedItem_3:
 NamedItem = Union[NamedItem_1, NamedItem_2, NamedItem_3]
 
 @dataclass
-class LookaheadOrCut_1:
-    type: Literal['&']
-    item_2: Commit
-    atom: Plain
+class Alt:
+    items: Annotated[list[NamedItem], "+", NO_LF_SPACE]
+    ending: Optional[Literal['$']]
 
 @dataclass
-class LookaheadOrCut_2:
-    type: Literal['!']
-    item_2: Commit
-    atom: Plain
-
-@dataclass
-class LookaheadOrCut_3:
-    type: Literal['~']
-
-LookaheadOrCut = Union[LookaheadOrCut_1, LookaheadOrCut_2, LookaheadOrCut_3]
-
-@dataclass
-class Item_1:
-    node: BracketOpt
-
-@dataclass
-class Item_2:
-    node: Quantifier
-
-@dataclass
-class Item_3:
-    node: SeparatedQuantifier
-
-@dataclass
-class Item_4:
-    node: Plain
-
-Item = Union[Item_1, Item_2, Item_3, Item_4]
-
-@dataclass
-class BracketOpt:
-    item_1: Literal['[']
-    item_2: Commit
+class MoreAlts:
+    _item_1: InitVar[Literal['|']]
     alts: Alts
-    item_4: Literal[']']
+    _item_3: InitVar[NEWLINE]
+    more_alts: Optional[MoreAlts]
 
 @dataclass
-class Quantifier:
-    node: Plain
-    quantifier: Union[Literal['?'], Literal['*'], Literal['+']]
+class Alts:
+    alts: Annotated[list[Alt], "+", Literal['|']]
 
 @dataclass
-class SeparatedQuantifier:
-    sep: Plain
-    item_2: Literal['.']
-    node: Plain
-    item_4: Literal['+']
+class Type:
+    _item_1: InitVar[Literal['[']]
+    type: NAME
+    pointer: Optional[Literal['*']]
+    _item_4: InitVar[Literal[']']]
 
 @dataclass
-class Plain_1:
-    atom: Grouped
+class RuleName:
+    name: NAME
+    type: Optional[Type]
 
 @dataclass
-class Plain_2:
-    atom: RegexLiteral
-
-@dataclass
-class Plain_3:
-    atom: NAME
-
-@dataclass
-class Plain_4:
-    atom: STRING
-
-Plain = Union[Plain_1, Plain_2, Plain_3, Plain_4]
-
-@dataclass
-class Grouped:
-    item_1: Literal['(']
-    item_2: Commit
+class Rule_1:
+    rulename: RuleName
+    _item_2: InitVar[Literal[':']]
     alts: Alts
-    item_4: Literal[')']
+    _item_4: InitVar[NEWLINE]
+    _item_5: InitVar[INDENT]
+    more_alts: MoreAlts
+    _item_7: InitVar[DEDENT]
 
 @dataclass
-class RegexLiteral:
-    item_1: Literal['r']
-    item_2: NO_SPACE
-    pattern: STRING
+class Rule_2:
+    rulename: RuleName
+    _item_2: InitVar[Literal[':']]
+    alts: None
+    _item_4: InitVar[NEWLINE]
+    _item_5: InitVar[INDENT]
+    more_alts: MoreAlts
+    _item_7: InitVar[DEDENT]
+
+@dataclass
+class Rule_3:
+    rulename: RuleName
+    _item_2: InitVar[Literal[':']]
+    alts: Alts
+    _item_4: InitVar[NEWLINE]
+    more_alts: None
+
+Rule = Union[Rule_1, Rule_2, Rule_3]
+
+@dataclass
+class MetaTuple:
+    _item_1: InitVar[Literal['@']]
+    meta_name: NAME
+    meta_value: Union[NAME, STRING, None]
+    _item_4: InitVar[NEWLINE]
+
+@dataclass
+class Grammar:
+    metas: list[MetaTuple]
+    rules: Annotated[list[Rule], "+"]
+
+@dataclass
+class Start:
+    grammar: Grammar
+    _item_2: InitVar[ENDMARKER]
 
 if __name__ == '__main__':
     import sys
@@ -197,6 +171,6 @@ if __name__ == '__main__':
 
     try:
         parsival.DEBUG = '--debug' in sys.argv
-        pprint(parsival.parse(text, Start))
+        pprint(parsival.parse(text, Start, indent=CustomIndent))
     except (SyntaxError, parsival.Failed) as exc:
         print('Failed:', str(exc)[:50], file=sys.stderr)

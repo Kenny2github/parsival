@@ -2,12 +2,15 @@ import sys
 import re
 from typing import Optional, Union, cast
 from parsival import parse
+from parsival.helper_rules import STRING
 from parsival.peg_grammar import (
-    Alt, Item, Item_1, Item_2, Item_3, Item_4,
+    Alt, BracketOpt, Grouped, Item,
     LookaheadOrCut, LookaheadOrCut_1, LookaheadOrCut_2, LookaheadOrCut_3,
-    MoreAlts, NamedItem, NamedItem_1, Plain, Plain_1, Plain_2, Plain_3, Plain_4,
-    Rule, Start
+    MoreAlts, NamedItem, NamedItem_1, Plain, Quantifier, RegexLiteral,
+    Rule, SeparatedQuantifier, Start
 )
+
+PlainTypes = (Grouped, RegexLiteral, str, STRING)
 
 rule_classes: dict[str, str] = {}
 
@@ -30,26 +33,23 @@ def collapse_more_alts(more_alts: Optional[MoreAlts]) -> list[Alt]:
     return more_alts.alts.alts + collapse_more_alts(more_alts.more_alts)
 
 def make_annotation(name: str, item: Union[Item, LookaheadOrCut, Plain]) -> str:
-    if isinstance(item, Item_1):
+    if isinstance(item, BracketOpt):
         name = snake_to_camel(name)
-        process_rule(name, item.node.alts.alts)
+        process_rule(name, item.alts.alts)
         return f'Optional[{name}]'
-    if isinstance(item, Item_2):
-        node = item.node
-        annotation = make_annotation(name, node.node)
-        if node.quantifier == '?':
+    if isinstance(item, Quantifier):
+        annotation = make_annotation(name, item.node)
+        if item.quantifier == '?':
             return f'Optional[{annotation}]'
-        if node.quantifier == '*':
+        if item.quantifier == '*':
             return f'list[{annotation}]'
-        if node.quantifier == '+':
+        if item.quantifier == '+':
             return f'Annotated[list[{annotation}], "+"]'
         raise RuntimeError('Exhausted quantifiers')
-    if isinstance(item, Item_3):
-        sep = make_annotation(f'{name}_sep', item.node.sep)
-        node = make_annotation(f'{name}_node', item.node.node)
+    if isinstance(item, SeparatedQuantifier):
+        sep = make_annotation(f'{name}_sep', item.sep)
+        node = make_annotation(f'{name}_node', item.node)
         return f'Annotated[list[{node}], "+", {sep}]'
-    if isinstance(item, Item_4):
-        return make_annotation(name, item.node)
     if isinstance(item, (LookaheadOrCut_1, LookaheadOrCut_2)):
         annotation = make_annotation(name, item.atom)
         if item.type == '&':
@@ -59,30 +59,30 @@ def make_annotation(name: str, item: Union[Item, LookaheadOrCut, Plain]) -> str:
         raise RuntimeError('Exhausted lookaheads')
     if isinstance(item, LookaheadOrCut_3):
         return 'Commit'
-    if isinstance(item, Plain_1):
+    if isinstance(item, Grouped):
         # fold plain rules into group annotation
         if all(len(alt.items) == 1
-               and isinstance(alt.items[0].item, Item_4)
-               for alt in item.atom.alts.alts):
+               and isinstance(alt.items[0].item, PlainTypes)
+               for alt in item.alts.alts):
             rulenames = [make_annotation(name, alt.items[0].item)
-                         for alt in item.atom.alts.alts]
+                         for alt in item.alts.alts]
             return f'Union[{", ".join(rulenames)}]'
         name = snake_to_camel(name)
-        process_rule(name, item.atom.alts.alts)
+        process_rule(name, item.alts.alts)
         return name
-    if isinstance(item, Plain_2):
-        return f'Regex[str, r"""{item.atom.pattern.string}"""]'
-    if isinstance(item, Plain_3):
+    if isinstance(item, RegexLiteral):
+        return f'Regex[str, r"""{item.pattern.string}"""]'
+    if isinstance(item, str):
         try:
-            return rule_classes[item.atom]
+            return rule_classes[item]
         except KeyError:
-            if item.atom.upper() == item.atom: # i.e. is uppercase
-                if item.atom == 'NONE':
+            if item.upper() == item: # i.e. is uppercase
+                if item == 'NONE':
                     return 'None'
-                return item.atom # all caps items are special tokens
+                return item # all caps items are special tokens
             raise
-    if isinstance(item, Plain_4):
-        return f'Literal[{item.atom.string!r}]'
+    if isinstance(item, STRING):
+        return f'Literal[{item.string!r}]'
     raise RuntimeError('Unreachable')
 
 def process_item(name: str, named_item: NamedItem) -> str:
@@ -100,7 +100,7 @@ def process_rule(rulename: str, alts: list[Alt]) -> None:
     if len(alts) > 1: # union time
         rulenames: list[str]
         if all(len(alt.items) == 1
-               and isinstance(alt.items[0].item, Item_4)
+               and isinstance(alt.items[0].item, PlainTypes)
                for alt in alts):
             rulenames = [make_annotation(f'{rulename}_{i}', alt.items[0].item)
                          for i, alt in enumerate(alts, start=1)]
@@ -161,7 +161,7 @@ def main(text: str) -> None:
 
     # populate rule_classes table first
     rules: dict[str, list[Alt]] = {}
-    for rule in ast.item_1.rules:
+    for rule in ast.grammar.rules:
         name = get_rule_name(rule)
         alts: list[Alt] = []
         if rule.alts:
