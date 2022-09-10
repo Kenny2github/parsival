@@ -1,4 +1,4 @@
-start[Start]: grammar ENDMARKER
+start[Start]: grammar=grammar ENDMARKER
 
 grammar[Grammar]: metas=meta* rules=rule+
 
