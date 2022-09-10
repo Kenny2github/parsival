@@ -1,5 +1,6 @@
 import sys
 import re
+from typing import TextIO
 
 def privatize_anonymous_items(text: str) -> str:
     text = re.sub(r'^(\s+)(item_\d+)\s*:\s*(.*)$',
@@ -8,6 +9,11 @@ def privatize_anonymous_items(text: str) -> str:
                         'from dataclasses import dataclass, InitVar')
     return text
 
+def main(file: TextIO) -> str:
+    lines: list[str] = []
+    for line in file:
+        lines.append(privatize_anonymous_items(line))
+    return ''.join(lines)
+
 if __name__ == '__main__':
-    for line in sys.stdin:
-        print(privatize_anonymous_items(line), end='')
+    print(main(sys.stdin))

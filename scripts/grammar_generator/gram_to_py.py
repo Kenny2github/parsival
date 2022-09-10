@@ -147,8 +147,8 @@ if __name__ == '__main__':
 """.rstrip() % start)
 
 
-if __name__ == '__main__':
-    ast: Start = cast(Start, parse(sys.stdin.read(), Start))
+def main(text: str) -> None:
+    ast: Start = cast(Start, parse(text, Start))
 
     print_header()
 
@@ -170,3 +170,14 @@ if __name__ == '__main__':
         process_rule(name, alts)
 
     print_footer()
+
+def capture_main(text: str) -> str:
+    import io
+    from contextlib import redirect_stdout
+    out = io.StringIO()
+    with redirect_stdout(out):
+        main(text)
+    return out.getvalue()
+
+if __name__ == '__main__':
+    main(sys.stdin.read())
