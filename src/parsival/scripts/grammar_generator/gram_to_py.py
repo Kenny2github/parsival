@@ -66,6 +66,8 @@ def make_annotation(name: str, item: Union[Item, LookaheadOrCut, Plain]) -> str:
                for alt in item.alts.alts):
             rulenames = [make_annotation(name, alt.items[0].item)
                          for alt in item.alts.alts]
+            if len(rulenames) == 1:
+                return rulenames[0]
             return f'Union[{", ".join(rulenames)}]'
         name = snake_to_camel(name)
         process_rule(name, item.alts.alts)
@@ -110,6 +112,10 @@ def process_rule(rulename: str, alts: list[Alt]) -> None:
                 rulenames.append(f'{rulename}_{i}')
                 process_rule(rulenames[-1], [alt])
         print(f'\n{rulename} = Union[{", ".join(rulenames)}]')
+    elif len(alts[0].items) == 1 and not isinstance(alts[0].items[0], NamedItem_1):
+        # alias if not named
+        annotation = make_annotation(rulename, alts[0].items[0].item)
+        print(f'\n{rulename} = {annotation}')
     else:
         alt = alts[0]
         items: list[str] = []
