@@ -116,7 +116,7 @@ class Parser:
             self.heads.clear()
             self.lr_stack = None
             if DEBUG:
-                print(' Generated indents '.center(79), file=sys.stderr)
+                print(' Generated indents '.center(79, '-'), file=sys.stderr)
 
     def parse(self, top_level: Rule, raise_on_unconsumed: bool = True) -> AST:
         self.pos = Pos(0)
