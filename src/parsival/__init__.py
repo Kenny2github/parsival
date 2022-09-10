@@ -1,5 +1,6 @@
 from __future__ import annotations
 import re
+import sys
 import typing as t
 from collections import defaultdict
 import dataclasses
@@ -115,7 +116,7 @@ class Parser:
             self.heads.clear()
             self.lr_stack = None
             if DEBUG:
-                print(' Generated indents '.center(79))
+                print(' Generated indents '.center(79), file=sys.stderr)
 
     def parse(self, top_level: Rule, raise_on_unconsumed: bool = True) -> AST:
         self.pos = Pos(0)
@@ -375,16 +376,16 @@ class Parser:
 
     def eval_(self, rule: Rule) -> AST_F:
         if DEBUG:
-            print(f'{self.strpos}: Trying {rule!r}')
+            print(f'{self.strpos}: Trying {rule!r}', file=sys.stderr)
         try:
             ans = self.try_rule(rule)
         except Failed as exc:
             if DEBUG:
-                print(f'{self.strpos}: Failure of {rule!r}\n\t{exc!s}')
+                print(f'{self.strpos}: Failure of {rule!r}\n\t{exc!s}', file=sys.stderr)
             return exc
         else:
             if DEBUG:
-                print(f'{self.strpos}: Success with {rule!r}\n\t{ans!r}')
+                print(f'{self.strpos}: Success with {rule!r}\n\t{ans!r}', file=sys.stderr)
         return ans
 
     def apply_rule(self, rule: Rule, pos: Pos) -> AST:
