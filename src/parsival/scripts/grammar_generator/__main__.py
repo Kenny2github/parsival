@@ -1,7 +1,4 @@
-from pathlib import Path
 import sys
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 import io
 import argparse
 from parsival.scripts.grammar_generator.gram_to_py import capture_main as gram_to_py
@@ -20,26 +17,30 @@ parser.add_argument('infile', default='-',
 parser.add_argument('outfile', default='-',
                     help='The module file to write, or - for stdout.')
 
-cmdargs = parser.parse_args()
+def main():
+    cmdargs = parser.parse_args()
 
-if cmdargs.infile == '-':
-    infile = open(sys.stdin.fileno(), 'r', closefd=False)
-else:
-    infile = open(cmdargs.infile, 'r')
-with infile:
-    grammar = infile.read()
+    if cmdargs.infile == '-':
+        infile = open(sys.stdin.fileno(), 'r', closefd=False)
+    else:
+        infile = open(cmdargs.infile, 'r')
+    with infile:
+        grammar = infile.read()
 
-module = gram_to_py(grammar)
-if cmdargs.postprocess:
-    from parsival.scripts.grammar_generator.postprocess import main as postprocess
-    module = postprocess(io.StringIO(module))
-if cmdargs.indent:
-    from parsival.scripts.grammar_generator.custom_indent import main as postprocess
-    module = postprocess(io.StringIO(module), cmdargs.indent)
+    module = gram_to_py(grammar)
+    if cmdargs.postprocess:
+        from parsival.scripts.grammar_generator.postprocess import main as postprocess
+        module = postprocess(io.StringIO(module))
+    if cmdargs.indent:
+        from parsival.scripts.grammar_generator.custom_indent import main as postprocess
+        module = postprocess(io.StringIO(module), cmdargs.indent)
 
-if cmdargs.outfile == '-':
-    outfile = open(sys.stdout.fileno(), 'w', closefd=False)
-else:
-    outfile = open(cmdargs.outfile, 'w')
-with outfile:
-    outfile.write(module)
+    if cmdargs.outfile == '-':
+        outfile = open(sys.stdout.fileno(), 'w', closefd=False)
+    else:
+        outfile = open(cmdargs.outfile, 'w')
+    with outfile:
+        outfile.write(module)
+
+if __name__ == '__main__':
+    main()

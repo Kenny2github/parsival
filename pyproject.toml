@@ -28,9 +28,12 @@ dynamic = ["version"]
 [project.urls]
 Source = "https://github.com/Kenny2github/parsival"
 
+[project.scripts]
+parsival-gramgen = "parsival.scripts.grammar_generator.__main__:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["parsival", "parsival.peg_grammar"]
+include = ["parsival", "parsival.scripts.grammar_generator"]
 
 [tool.setuptools.dynamic]
 version = {attr = "parsival.__version__"}
