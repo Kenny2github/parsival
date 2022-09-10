@@ -178,6 +178,11 @@ def main(text: str) -> None:
 
     print_footer()
 
+    print('Done. You may need to manually reorder definitions in the',
+          'generated module contents, to resolve unbound name errors,',
+          'especially if your grammar file is not top-down.',
+          file=sys.stderr, sep='\n')
+
 def capture_main(text: str) -> str:
     import io
     from contextlib import redirect_stdout
