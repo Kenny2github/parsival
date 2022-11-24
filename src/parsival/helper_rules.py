@@ -126,10 +126,13 @@ class ENDMARKER:
 NAME = Regex[str, r'[a-zA-Z_][a-zA-Z_0-9]*']
 
 class STRING:
-    string: Regex[str, r"'(?:[^'\\]|\\(?:\\\\)*.)*'"
-                  + r'|"(?:[^"\\]|\\(?:\\\\)*.)*"']
+    string: str
 
-    def __init__(self, string: str) -> None:
+    def __init__(
+        self,
+        string: Regex[str, r"'(?:[^'\\]|\\(?:\\\\)*.)*'"
+                      + r'|"(?:[^"\\]|\\(?:\\\\)*.)*"'],
+    ) -> None:
         self.string = eval(string)
 
     def __repr__(self) -> str:

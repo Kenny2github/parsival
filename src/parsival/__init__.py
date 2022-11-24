@@ -176,7 +176,11 @@ class Parser:
         Since this evaluates them, cache them for future retrieval.
         """
         if cls not in self.annotations_cache:
-            self.annotations_cache[cls] = t.get_type_hints(cls, include_extras=True)
+            self.annotations_cache[cls] = t.get_type_hints(
+                cls.__init__, include_extras=True)
+            # "return" may be in annotations but is never
+            # a valid attribute name
+            self.annotations_cache[cls].pop('return', '')
         return self.annotations_cache[cls]
 
     def get_annotation(self, cls: type, attr: str) -> t.Any:
