@@ -22,7 +22,7 @@ __all__ = [
     'Parser',
 ]
 
-__version__ = '0.0.0a0'
+__version__ = '0.0.0a1'
 
 DEBUG: bool = False
 
