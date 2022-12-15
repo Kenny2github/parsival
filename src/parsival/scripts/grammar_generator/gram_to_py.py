@@ -135,6 +135,7 @@ def print_header() -> None:
 from __future__ import annotations
 from typing import Literal, Annotated, Union, Optional
 from dataclasses import dataclass
+import parsival
 from parsival import Commit
 from parsival.helper_rules import *
 """.strip())
@@ -142,6 +143,10 @@ from parsival.helper_rules import *
 def print_footer() -> None:
     start = next(iter(rule_classes.values()))
     print(r"""
+def parse(text: str) -> {0}:
+    '''Parse and return a(n) {0}.'''
+    return parsival.parse(text, {0}) # type: ignore
+
 if __name__ == '__main__':
     import sys
     import parsival
@@ -153,14 +158,14 @@ if __name__ == '__main__':
     except ImportError:
         from pprint import pprint
     else:
-        install_extras(include=frozenset({'dataclasses'}))
+        install_extras(include=frozenset({{'dataclasses'}}))
 
     try:
         parsival.DEBUG = '--debug' in sys.argv
-        pprint(parsival.parse(text, %s))
+        pprint(parse(text))
     except (SyntaxError, parsival.Failed) as exc:
         print('Failed:', str(exc)[:50], file=sys.stderr)
-""".rstrip() % start)
+""".rstrip().format(start))
 
 
 def main(text: str) -> None:
