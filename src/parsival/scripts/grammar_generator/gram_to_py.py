@@ -4,7 +4,7 @@ from typing import Optional, Union, cast
 from parsival import parse, __version__
 from parsival.helper_rules import STRING
 from parsival.peg_grammar import (
-    Alt, BracketOpt, Grouped, Item,
+    Alt, BracketOpt, Grouped, Item, Comment,
     LookaheadOrCut, LookaheadOrCut_1, LookaheadOrCut_2, LookaheadOrCut_3,
     MoreAlts, NamedItem, NamedItem_1, Plain, Quantifier, RegexLiteral,
     Rule, SeparatedQuantifier, Start
@@ -171,6 +171,8 @@ def main(text: str) -> None:
     # populate rule_classes table first
     rules: dict[str, list[Alt]] = {}
     for rule in ast.grammar.rules:
+        if isinstance(rule, Comment):
+            continue
         name = get_rule_name(rule)
         alts: list[Alt] = []
         if rule.alts:

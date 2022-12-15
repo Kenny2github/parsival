@@ -1,13 +1,19 @@
 start[Start]: grammar=grammar ENDMARKER
 
-grammar[Grammar]: metas=meta* rules=rule+
+grammar[Grammar]: metas=meta_or_comment* rules=rule_or_comment+
 
-meta[MetaTuple]: "@" meta_name=NAME meta_value=(value=NAME | value=STRING | value=NONE) NEWLINE
+meta_or_comment[MetaOrComment]: meta | comment
+rule_or_comment[RuleOrComment]: rule | comment
+maybe_comment[MaybeComment]: comment | NEWLINE
+
+comment[Comment]: '#' ~ r'.*' NEWLINE
+
+meta[MetaTuple]: "@" meta_name=NAME meta_value=(value=NAME | value=STRING | value=NONE) maybe_comment
 
 rule[Rule]:
-    | rulename=rulename ":" alts=alts NEWLINE INDENT more_alts=more_alts DEDENT
-    | rulename=rulename ":" alts=NONE NEWLINE INDENT more_alts=more_alts DEDENT
-    | rulename=rulename ":" alts=alts NEWLINE more_alts=NONE
+    | rulename=rulename ":" alts=alts maybe_comment INDENT more_alts=more_alts DEDENT
+    | rulename=rulename ":" alts=NONE maybe_comment INDENT more_alts=more_alts DEDENT
+    | rulename=rulename ":" alts=alts maybe_comment more_alts=NONE
 
 rulename[RuleName]: name=NAME type=[ '[' type=NAME pointer='*'? ']' ]
 
