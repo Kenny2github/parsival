@@ -6,6 +6,7 @@ from collections import defaultdict
 import dataclasses
 from enum import Enum
 from contextlib import contextmanager
+from importlib.metadata import version as _version
 
 from .helper_rules import (
     _Regex, _Not, _Lookahead, SPACE, NO_LF_SPACE, NEWLINE,
@@ -22,7 +23,7 @@ __all__ = [
     'Parser',
 ]
 
-__version__ = '0.0.0a1'
+__version__ = _version('parsival')
 
 DEBUG: bool = False
 

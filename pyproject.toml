@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parsival"
+version = "0.0.0a2"
 description = "A class-based language parser."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -23,7 +24,6 @@ classifiers = [
 	"Typing :: Typed"
 ]
 dependencies = []
-dynamic = ["version"]
 
 [project.urls]
 Source = "https://github.com/Kenny2github/parsival"
@@ -43,9 +43,6 @@ parsival-gramgen = "parsival.scripts.grammar_generator.__main__:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["parsival", "parsival.scripts.grammar_generator"]
-
-[tool.setuptools.dynamic]
-version = {attr = "parsival.__version__"}
 
 [tool.pytest.ini_options]
 addopts = [
