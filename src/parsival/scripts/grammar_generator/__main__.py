@@ -14,6 +14,8 @@ parser.add_argument('--indent', action='store_const', const='SpaceOrTabIndent.in
                     help='Use four spaces and/or a tab to indent.')
 parser.add_argument('--custom-indent', metavar='RULE', dest='indent',
                     help='Use this Python expression as the indent rule.')
+parser.add_argument('--no-indent', action='store_const', const=None,
+                    dest='indent', help='Do not use an indent rule.')
 parser.add_argument('infile', default='-',
                     help='The grammar file to read, or - for stdin.')
 parser.add_argument('outfile', default='-',
@@ -34,8 +36,11 @@ def main():
         from parsival.scripts.grammar_generator.postprocess import main as postprocess
         module = postprocess(io.StringIO(module))
     if cmdargs.indent:
-        from parsival.scripts.grammar_generator.custom_indent import main as postprocess
-        module = postprocess(io.StringIO(module), cmdargs.indent)
+        from parsival.scripts.grammar_generator.custom_indent import main as custom_indent
+        module = custom_indent(io.StringIO(module), cmdargs.indent)
+    elif cmdargs.indent is None:
+        from parsival.scripts.grammar_generator.custom_indent import unmain as remove_indent
+        module = remove_indent(io.StringIO(module))
 
     if cmdargs.outfile == '-':
         outfile = open(sys.stdout.fileno(), 'w', closefd=False)

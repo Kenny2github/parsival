@@ -17,6 +17,10 @@ def insert_indent_class(text: str) -> str:
     return re.sub(r"parsival\s*\.\s*parse\s*\(\s*([^\)]+?)\s*,?\s*\)",
                   r"parsival.parse(\1, indent=CustomIndent)", text)
 
+def disable_indent(text: str) -> str:
+    return re.sub(r"parsival\s*\.\s*parse\s*\(\s*([^\)]+?)\s*,?\s*\)",
+                  r"parsival.parse(\1, indent=None)", text)
+
 def main(file: TextIO, cls: str) -> str:
     lines: list[str] = []
     for line in file:
@@ -24,6 +28,14 @@ def main(file: TextIO, cls: str) -> str:
             line = add_indent_class(line, cls)
         elif 'parse' in line:
             line = insert_indent_class(line)
+        lines.append(line)
+    return ''.join(lines)
+
+def unmain(file: TextIO) -> str:
+    lines: list[str] = []
+    for line in file:
+        if 'parse' in line:
+            line = disable_indent(line)
         lines.append(line)
     return ''.join(lines)
 
