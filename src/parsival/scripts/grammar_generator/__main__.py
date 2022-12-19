@@ -5,9 +5,11 @@ from parsival.scripts.grammar_generator.gram_to_py import capture_main as gram_t
 
 parser = argparse.ArgumentParser(
     description='Generate a grammar module from a grammar file.')
-parser.add_argument('--postprocess', action='store_true', default=False,
-                    help='Post-process the module. Currently this involves '
-                    'making all anonymous items into private InitVars.')
+parser.add_argument('--no-postprocess', action='store_false', default=True,
+                    help='Do not post-process the module. Currently post-'
+                    'processing involves making all anonymous items into '
+                    'private InitVars, and converting Unions of single-arg '
+                    'Literals to multi-arg Literals.')
 parser.add_argument('--indent', action='store_const', const='SpaceOrTabIndent.indent()',
                     help='Use four spaces and/or a tab to indent.')
 parser.add_argument('--custom-indent', metavar='RULE', dest='indent',
